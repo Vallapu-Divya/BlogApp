@@ -8,11 +8,10 @@ import { useNavigate } from "react-router-dom";
 
 
 
-
-
 const Auth = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const history = useNavigate()
 
 
   const [inputs, setInputs] = useState({
@@ -34,7 +33,7 @@ const handleChange = (e) => {
 
 
 
-const sendRequest = async (type="login") => {
+/*const sendRequest = async (type="login") => {
   //const res = await axios.post(`https://mern-blog-app-2022.herokuapp.com/api/user/${type}`, { 
  const res = await axios
   .post(`http://localhost:5000/api/user/${type}`, {
@@ -47,10 +46,29 @@ const sendRequest = async (type="login") => {
 
 const data = await res?.data;
 
+
 console.log(data);
 return data
 }
 
+const sendRequest = async (type = 'login') => {
+  const res = await axios.post(`http://localhost:5000/api/user/${type}`, {
+    name: inputs.name,
+    email: inputs.email,
+    password: inputs.password
+  }).catch((err) => {
+    if (err.response.status === 400 && err.response.data.message === 'User already exists') {
+      alert('User already exists. Please login.');
+      navigate("/"); // Navigate to the login page
+    } else {
+      dispatch(authActions.signInFailure(err.message)); // Dispatch signInFailure action for other errors
+    }
+  });
+
+  const data = await res?.data;
+  console.log(data);
+  return data;
+};
 
 const handleSubmit = (e) => {
   e.preventDefault()
@@ -60,29 +78,89 @@ const handleSubmit = (e) => {
     // return dispatch(authActions.signInFailure());
     return dispatch(authActions.signInFailure(alert('Please fill all the fields'))) // Dispatch validation error action
     //throw new Error('Please fill all the fields');
-     
       
   }
+
 
   if (isSignup && !inputs.name) {
     return dispatch(authActions.signInFailure(alert('Name is required for signup'))); // Dispatch validation error action
    //return
   }
 
-  if(isSignup){
-    sendRequest("signup").then((data) =>localStorage.setItem("userId", data?.user?._id))
+if(isSignup){
+    sendRequest("signup") 
+    .then((data) =>localStorage.setItem("userId", data?.user?._id))
     .then(() => dispatch(authActions.login()))
     .then(() => navigate("/blogs"))
     
   }
-   else {
+else {
     sendRequest().then((data) => localStorage.setItem("userId", data?.user?._id))
     .then(() => dispatch(authActions.login()) )
     .then(() => navigate("/blogs"))
   }
   
 
-}  
+}  */
+
+const sendRequest = async (type = 'login') => {
+  try {
+    const res = await axios.post(`http://localhost:5000/api/user/${type}`, {
+      name: inputs.name,
+      email: inputs.email,
+      password: inputs.password
+    });
+
+    const data = res?.data;
+    console.log(data); // Check response data in the console
+
+    if (type === 'signup') {
+      localStorage.setItem("userId", data?.user?._id);
+      dispatch(authActions.login())
+     navigate("/blogs")
+    }
+
+    return data;
+  } catch (err) {
+    if (err.response && err.response.status === 400 && err.response.data.message === 'User already exists') {
+      alert('User already exists. Please login.');
+      return null; // Return null to indicate user exists
+    } else if (err.response && err.response.status === 400 && err.response.data.message === 'Incorrect Password') {
+      alert('Incorrect password. Please enter the correct password.');
+      return null; // Return null to indicate incorrect password
+    }
+     else {
+      dispatch(authActions.signInFailure(err.message));
+      return null; // Return null for other errors
+    }
+
+  }
+};
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!inputs.email || !inputs.password) {
+    return dispatch(authActions.signInFailure(alert('Please fill all the fields')));
+  }
+
+  if (isSignup && !inputs.name) {
+    return dispatch(authActions.signInFailure(alert('Name is required for signup')));
+  }
+
+  const data = await sendRequest(isSignup ? 'signup' : 'login');
+
+  if (data) {
+    if (isSignup) {
+      navigate("/Auth"); // Navigate to the login page after successful signup
+    } else {
+      localStorage.setItem("userId", data?.user?._id);
+      dispatch(authActions.login());
+      navigate("/blogs"); // Navigate to the blogs page after successful login
+    }
+  }
+};
+
 
   return (
     <div>
